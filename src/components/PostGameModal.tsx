@@ -150,7 +150,7 @@ export const PostGameModal: React.FC<PostGameModalProps> = ({
             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-stone-800 hover:bg-stone-700/80 text-stone-200 font-medium text-sm border border-stone-700/60 transition-all"
           >
             <Eye className="w-4 h-4 text-stone-400" />
-            <span>Inspect Un-fogged Board</span>
+            <span>Reveal all pieces on board</span>
           </button>
 
           <button

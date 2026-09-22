@@ -66,7 +66,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ onClose }) => {
                 <li><strong>Empty:</strong> Moving piece moves onto the tile.</li>
                 <li><strong>Ally Found:</strong> Ally wakes up and becomes active. Moving piece <em>bounces back</em> to its starting tile! Notation: <code className="text-amber-300 font-mono">Ke2(=e3)</code>.</li>
                 <li><strong>Enemy Found (by non-pawn):</strong> Enemy is captured and removed!</li>
-                <li><strong>Enemy Found (by straight pawn):</strong> Enemy is revealed, but pawn <em>bounces back</em> without capturing. Notation: <code className="text-amber-300 font-mono">d4(!d5)</code>.</li>
+                <li><strong>Enemy Found (by straight pawn):</strong> Pawn discovers an opponent piece and <em>bounces back</em> without capturing. The piece is <strong>not revealed</strong>; instead, the square is marked with a <strong>?</strong> in that opponent's color. Neither player knows which piece is hiding there until an ally makes a valid move to that square to reveal & activate it (ally bounce), or an enemy captures it! Notation: <code className="text-amber-300 font-mono">d4(!d5)</code>.</li>
               </ul>
             </div>
           </div>

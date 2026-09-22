@@ -93,7 +93,7 @@ export const Chessboard: React.FC<ChessboardProps> = ({
 
     // Otherwise check if clicking an active piece of current turn
     const sq = gameState.squares[coord];
-    if (sq?.revealed && sq.piece) {
+    if (sq?.revealed && sq.piece && sq.piece.type !== 'unknown') {
       if (sq.piece.color === gameState.turn && isMyTurn) {
         if (selectedSquare === coord) {
           onSelectSquare(null);
@@ -263,6 +263,28 @@ export const Chessboard: React.FC<ChessboardProps> = ({
                   >
                     <ChessPieceSvg type={piece.type} color={piece.color} />
                   </motion.div>
+                )}
+
+                {/* Mystery Question Mark Square Badge */}
+                {isRevealed && piece?.type === 'unknown' && (
+                  <div
+                    id={`unknown-marker-${coord}`}
+                    className="absolute bottom-1 right-1 z-25 flex items-center justify-center pointer-events-none"
+                  >
+                    <div
+                      className={`px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-black tracking-wider shadow-md flex items-center gap-0.5 border ${
+                        piece.color === 'white'
+                          ? 'bg-stone-100 text-stone-900 border-stone-400 shadow-stone-950/40'
+                          : 'bg-stone-900 text-stone-100 border-stone-600 shadow-stone-950/60 ring-1 ring-stone-700'
+                      }`}
+                      title={`Hidden ${piece.color} piece discovered by a pawn`}
+                    >
+                      <span className="opacity-80 text-[8px] uppercase tracking-tighter">
+                        {piece.color === 'white' ? 'W' : 'B'}
+                      </span>
+                      <span>?</span>
+                    </div>
+                  </div>
                 )}
 
                 {/* Bouncing Piece Animation */}

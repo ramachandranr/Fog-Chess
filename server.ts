@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
   createInitialGameState,
@@ -15,9 +15,6 @@ import {
   PlayerColor,
   PieceType,
 } from './src/types.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 interface RoomSession {
   roomId: string;
@@ -58,7 +55,7 @@ function broadcastToRoom(room: RoomSession, msg: ServerMessage) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json());
 
@@ -298,19 +295,23 @@ async function startServer() {
   });
 
   // Vite middleware for development vs static serve for production
-  if (process.env.NODE_ENV !== 'production') {
+  const distPath = path.join(process.cwd(), 'dist');
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    (fs.existsSync(path.join(distPath, 'index.html')) && process.env.NODE_ENV !== 'development');
+
+  if (isProduction) {
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
   }
 
   server.listen(PORT, '0.0.0.0', () => {

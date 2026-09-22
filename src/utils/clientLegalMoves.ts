@@ -54,6 +54,9 @@ export function isSquareAttackedByVisibleEnemyClient(
     // Kings can never deliver check to an opponent king
     if (piece.type === 'king' && excludeKing) continue;
 
+    // Unknown pieces cannot deliver attacks/checks
+    if (piece.type === 'unknown') continue;
+
     const { file: pF, rank: pR } = coordToFileRank(piecePos);
     const pieceType = piece.type;
 
@@ -208,6 +211,19 @@ export function wouldMoveLeaveKingInCheckClient(
   }
 
   // Moving to revealed square:
+  const isAllyMysteryProbe =
+    targetSq.piece !== null &&
+    targetSq.piece.color === piece.color &&
+    targetSq.piece.type === 'unknown';
+  if (isAllyMysteryProbe) {
+    if (currentlyInCheck) {
+      return true;
+    }
+    return isKingInCheckClient(state, piece.color, {
+      fromCoord,
+    });
+  }
+
   const isEnemyCaptured = targetSq.piece !== null && targetSq.piece.color !== piece.color;
   return isKingInCheckClient(state, piece.color, {
     fromCoord,
@@ -223,6 +239,7 @@ export function getClientLegalMoves(
   const sq = state.squares[fromCoord];
   if (!sq || !sq.revealed || !sq.piece) return [];
   if (sq.piece.color !== state.turn) return [];
+  if (sq.piece.type === 'unknown') return [];
 
   const piece = sq.piece;
   const { file: f, rank: r } = coordToFileRank(fromCoord);
@@ -248,6 +265,8 @@ export function getClientLegalMoves(
             targets.push({ coordinate: targetCoord, type: 'move' });
           } else if (targetSq.piece.color === enemyColor) {
             targets.push({ coordinate: targetCoord, type: 'capture' });
+          } else if (targetSq.piece.color === piece.color && targetSq.piece.type === 'unknown') {
+            targets.push({ coordinate: targetCoord, type: 'probe' });
           }
         }
       }
@@ -278,6 +297,8 @@ export function getClientLegalMoves(
         targets.push({ coordinate: targetCoord, type: 'move' });
       } else if (targetSq.piece.color === enemyColor) {
         targets.push({ coordinate: targetCoord, type: 'capture' });
+      } else if (targetSq.piece.color === piece.color && targetSq.piece.type === 'unknown') {
+        targets.push({ coordinate: targetCoord, type: 'probe' });
       }
     }
   } else if (piece.type === 'pawn') {
@@ -292,6 +313,8 @@ export function getClientLegalMoves(
           targets.push({ coordinate: forwardCoord, type: 'probe' });
         } else if (forwardSq.piece === null) {
           targets.push({ coordinate: forwardCoord, type: 'move' });
+        } else if (forwardSq.piece.color === piece.color && forwardSq.piece.type === 'unknown') {
+          targets.push({ coordinate: forwardCoord, type: 'probe' });
         }
       }
     }
@@ -341,6 +364,8 @@ export function getClientLegalMoves(
         } else {
           if (targetSq.piece.color === enemyColor) {
             targets.push({ coordinate: targetCoord, type: 'capture' });
+          } else if (targetSq.piece.color === piece.color && targetSq.piece.type === 'unknown') {
+            targets.push({ coordinate: targetCoord, type: 'probe' });
           }
           break;
         }

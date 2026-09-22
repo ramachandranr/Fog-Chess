@@ -1,4 +1,4 @@
-export type PieceType = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
+export type PieceType = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn' | 'unknown';
 export type PlayerColor = 'white' | 'black';
 
 export interface Piece {
@@ -7,6 +7,7 @@ export interface Piece {
   color: PlayerColor;
   active: boolean;
   position: string; // e.g. "e4"
+  isUnknown?: boolean; // When discovered by a straight-moving pawn, piece type is hidden from players
 }
 
 export interface BoardSquare {

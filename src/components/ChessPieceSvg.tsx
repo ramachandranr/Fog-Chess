@@ -191,6 +191,44 @@ export const ChessPieceSvg: React.FC<ChessPieceSvgProps> = ({
             </g>
           </svg>
         );
+
+      case 'unknown':
+        return (
+          <svg viewBox="0 0 45 45" className={className} id={`piece-unknown-white`}>
+            <g strokeLinecap="round" strokeLinejoin="round">
+              {/* White Pedestal Base */}
+              <path
+                d="M 11.5 38.5 C 16 41 29 41 33.5 38.5 L 33.5 34 C 29 32.5 16 32.5 11.5 34 Z"
+                fill={whiteFill}
+                stroke={darkStroke}
+                strokeWidth="1.6"
+              />
+              <path
+                d="M 14 34 C 18 32.5 27 32.5 31 34 L 29.5 30 C 26 29 19 29 15.5 30 Z"
+                fill={whiteFill}
+                stroke={darkStroke}
+                strokeWidth="1.4"
+              />
+              {/* White Mystery Orb */}
+              <circle
+                cx="22.5"
+                cy="19"
+                r="13.5"
+                fill={whiteFill}
+                stroke={darkStroke}
+                strokeWidth="1.8"
+              />
+              {/* Question mark in dark piece stroke */}
+              <path
+                d="M 19 14.5 C 19.5 12 21.5 11 23.5 11 C 26 11 27.8 12.6 27.8 15 C 27.8 17.2 26 18.5 24.2 19.8 C 23.2 20.6 22.8 21.4 22.8 23 L 22.8 23.5"
+                fill="none"
+                stroke={darkStroke}
+                strokeWidth="2.8"
+              />
+              <circle cx="22.8" cy="27.5" r="1.5" fill={darkStroke} />
+            </g>
+          </svg>
+        );
     }
   } else {
     // Black piece standard Staunton
@@ -375,6 +413,44 @@ export const ChessPieceSvg: React.FC<ChessPieceSvgProps> = ({
                 d="M 22 9 C 19.79 9 18 10.79 18 13 C 18 13.89 18.29 14.71 18.78 15.38 C 16.83 16.5 15.5 18.59 15.5 21 C 15.5 23.03 16.44 24.84 17.91 26.03 C 14.91 27.09 10.5 31.58 10.5 39.5 L 34.5 39.5 C 34.5 31.58 30.09 27.09 27.09 26.03 C 28.56 24.84 29.5 23.03 29.5 21 C 29.5 18.59 28.17 16.5 26.22 15.38 C 26.71 14.71 27 13.89 27 13 C 27 10.79 25.21 9 23 9 C 22.66 9 22.33 9.04 22 9.13 L 22 9 z"
                 fill={blackFill}
               />
+            </g>
+          </svg>
+        );
+
+      case 'unknown':
+        return (
+          <svg viewBox="0 0 45 45" className={className} id={`piece-unknown-black`}>
+            <g strokeLinecap="round" strokeLinejoin="round">
+              {/* Black Pedestal Base with White Outline */}
+              <path
+                d="M 11.5 38.5 C 16 41 29 41 33.5 38.5 L 33.5 34 C 29 32.5 16 32.5 11.5 34 Z"
+                fill={blackFill}
+                stroke={lightStroke}
+                strokeWidth="1.6"
+              />
+              <path
+                d="M 14 34 C 18 32.5 27 32.5 31 34 L 29.5 30 C 26 29 19 29 15.5 30 Z"
+                fill={blackFill}
+                stroke={lightStroke}
+                strokeWidth="1.4"
+              />
+              {/* Black Mystery Orb with White Outline */}
+              <circle
+                cx="22.5"
+                cy="19"
+                r="13.5"
+                fill={blackFill}
+                stroke={lightStroke}
+                strokeWidth="1.8"
+              />
+              {/* White Question mark inside Black piece */}
+              <path
+                d="M 19 14.5 C 19.5 12 21.5 11 23.5 11 C 26 11 27.8 12.6 27.8 15 C 27.8 17.2 26 18.5 24.2 19.8 C 23.2 20.6 22.8 21.4 22.8 23 L 22.8 23.5"
+                fill="none"
+                stroke={lightStroke}
+                strokeWidth="2.8"
+              />
+              <circle cx="22.8" cy="27.5" r="1.5" fill={lightStroke} />
             </g>
           </svg>
         );

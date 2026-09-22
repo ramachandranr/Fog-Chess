@@ -48,6 +48,8 @@ function getPieceLetter(type: PieceType): string {
       return 'N';
     case 'pawn':
       return '';
+    case 'unknown':
+      return '?';
   }
 }
 
@@ -301,6 +303,9 @@ export function isSquareAttackedByVisibleEnemy(
     // Kings can never deliver check to an opponent king
     if (piece.type === 'king' && excludeKing) continue;
 
+    // An unknown piece whose identity is hidden does not deliver attacks/checks
+    if (piece.isUnknown) continue;
+
     const { file: pF, rank: pR } = coordToFileRank(piecePos);
 
     if (piece.type === 'king') {
@@ -481,8 +486,19 @@ export function wouldMoveLeaveKingInCheck(
     });
   }
 
-  // Moving to a revealed square (either empty or capturing enemy)
-  const isEnemyCaptured = targetSq.pieceId !== null && state.pieces[targetSq.pieceId]?.color !== piece.color;
+  // Moving to a revealed square (either empty, capturing enemy, or revealing ally mystery piece)
+  const occupant = targetSq.pieceId ? state.pieces[targetSq.pieceId] : null;
+  const isAllyMysteryProbe = occupant && occupant.color === piece.color && occupant.isUnknown;
+  if (isAllyMysteryProbe) {
+    if (currentlyInCheck) {
+      return true;
+    }
+    return isKingInCheck(state, piece.color, {
+      fromCoord,
+    });
+  }
+
+  const isEnemyCaptured = occupant !== null && occupant.color !== piece.color;
   return isKingInCheck(state, piece.color, {
     fromCoord,
     toCoord,
@@ -506,6 +522,9 @@ export function getLegalMovesForPiece(
 
   // Piece must be on a revealed square to be moved
   if (!square.revealed) return [];
+
+  // An unknown piece whose identity is hidden cannot be moved
+  if (piece.isUnknown) return [];
 
   const { file: f, rank: r } = coordToFileRank(fromCoord);
   const targets: LegalTarget[] = [];
@@ -532,6 +551,8 @@ export function getLegalMovesForPiece(
             const occupant = state.pieces[targetSq.pieceId];
             if (occupant && occupant.color === enemyColor) {
               targets.push({ coordinate: targetCoord, type: 'capture' });
+            } else if (occupant && occupant.color === piece.color && occupant.isUnknown) {
+              targets.push({ coordinate: targetCoord, type: 'probe' });
             }
           }
         }
@@ -564,6 +585,8 @@ export function getLegalMovesForPiece(
         const occupant = state.pieces[targetSq.pieceId];
         if (occupant && occupant.color === enemyColor) {
           targets.push({ coordinate: targetCoord, type: 'capture' });
+        } else if (occupant && occupant.color === piece.color && occupant.isUnknown) {
+          targets.push({ coordinate: targetCoord, type: 'probe' });
         }
       }
     }
@@ -581,8 +604,13 @@ export function getLegalMovesForPiece(
       } else if (forwardSq.pieceId === null) {
         // Moves forward to empty revealed tile
         targets.push({ coordinate: forwardCoord, type: 'move' });
+      } else {
+        const occupant = state.pieces[forwardSq.pieceId];
+        if (occupant && occupant.color === piece.color && occupant.isUnknown) {
+          targets.push({ coordinate: forwardCoord, type: 'probe' });
+        }
       }
-      // Straight into revealed piece (ally or enemy) is blocked for pawns!
+      // Straight into known piece (ally or enemy) is blocked for pawns!
     }
 
     // Diagonal movement: permitted ONLY to capture an already-revealed enemy piece
@@ -638,6 +666,9 @@ export function getLegalMovesForPiece(
           const occupant = state.pieces[targetSq.pieceId];
           if (occupant && occupant.color === enemyColor) {
             targets.push({ coordinate: targetCoord, type: 'capture' });
+          } else if (occupant && occupant.color === piece.color && occupant.isUnknown) {
+            // An ally mystery piece! A valid move here will reveal that ally piece!
+            targets.push({ coordinate: targetCoord, type: 'probe' });
           }
           // Blocked by ally or enemy piece
           break;
@@ -786,18 +817,25 @@ export function executeMove(
         // 2. Ally Piece Discovered: ally becomes active, mover bounces back
         outcome = 'ally_bounce';
         // Piece stays at `from`, ally stays at `to`
+        movingPiece.position = from;
         notation = `${pieceLetter}${from}(=${to})`;
       } else {
         // Discovered enemy piece!
         if (movingPiece.type === 'pawn' && target.type === 'probe') {
           // 4. Enemy Piece Discovered (Pawn Moving Straight):
-          // Enemy revealed but NOT captured. Pawn bounces back.
+          // If a pawn moves forward and finds an opponent piece, it will NOT reveal the opponent piece.
+          // The square gets marked with a question mark with the color of the piece that is on that square.
+          // The players will not know what piece was on that square!
           outcome = 'pawn_bounce';
           notation = `${from}(!${to})`;
+          discoveredPiece.isUnknown = true;
+          // Revealed info for move record should NOT leak piece type
+          revealedPieceInfo = { type: 'unknown', color: discoveredPiece.color };
         } else {
           // 3. Enemy Piece Discovered (Non-Pawn Mover or Pawn Diagonal):
           // Captured and removed! Moving piece occupies square.
           outcome = 'capture';
+          discoveredPiece.isUnknown = false;
           capturedPieceInfo = { type: discoveredPiece.type, color: discoveredPiece.color };
           discoveredPiece.position = 'captured';
           state.captured.push(discoveredPiece);
@@ -856,38 +894,50 @@ export function executeMove(
         notation = `${pieceLetter}${to}`;
       }
     } else {
-      // Capture already revealed enemy
-      const enemyPiece = state.pieces[targetSq.pieceId];
-      outcome = 'capture';
-      capturedPieceInfo = { type: enemyPiece.type, color: enemyPiece.color };
-      enemyPiece.position = 'captured';
-      state.captured.push(enemyPiece);
-
-      state.squares[from].pieceId = null;
-      state.squares[to].pieceId = movingPiece.id;
-      movingPiece.position = to;
-      movingPiece.active = true;
-
-      if (enemyPiece.type === 'king') {
-        state.status = 'completed';
-        state.winner = movingPiece.color;
-        state.winReason = 'King captured';
-        notation = `${pieceLetter || from[0]}x${to}#`;
+      const occupant = state.pieces[targetSq.pieceId];
+      if (occupant.color === movingPiece.color) {
+        // Ally mystery piece discovered/revealed by an ally move!
+        outcome = 'ally_bounce';
+        occupant.isUnknown = false;
+        occupant.active = true;
+        movingPiece.position = from;
+        revealedPieceInfo = { type: occupant.type, color: occupant.color };
+        notation = `${pieceLetter}${from}(=${to})`;
       } else {
-        if (movingPiece.type === 'pawn') {
-          const { rank } = coordToFileRank(to);
-          if (
-            (movingPiece.color === 'white' && rank === 7) ||
-            (movingPiece.color === 'black' && rank === 0)
-          ) {
-            const promoType = promotion || 'queen';
-            movingPiece.type = promoType;
-            notation = `${from[0]}x${to}=${getPieceLetter(promoType)}`;
-          } else {
-            notation = `${from[0]}x${to}`;
-          }
+        // Capture already revealed enemy
+        const enemyPiece = occupant;
+        outcome = 'capture';
+        enemyPiece.isUnknown = false;
+        capturedPieceInfo = { type: enemyPiece.type, color: enemyPiece.color };
+        enemyPiece.position = 'captured';
+        state.captured.push(enemyPiece);
+
+        state.squares[from].pieceId = null;
+        state.squares[to].pieceId = movingPiece.id;
+        movingPiece.position = to;
+        movingPiece.active = true;
+
+        if (enemyPiece.type === 'king') {
+          state.status = 'completed';
+          state.winner = movingPiece.color;
+          state.winReason = 'King captured';
+          notation = `${pieceLetter || from[0]}x${to}#`;
         } else {
-          notation = `${pieceLetter}x${to}`;
+          if (movingPiece.type === 'pawn') {
+            const { rank } = coordToFileRank(to);
+            if (
+              (movingPiece.color === 'white' && rank === 7) ||
+              (movingPiece.color === 'black' && rank === 0)
+            ) {
+              const promoType = promotion || 'queen';
+              movingPiece.type = promoType;
+              notation = `${from[0]}x${to}=${getPieceLetter(promoType)}`;
+            } else {
+              notation = `${from[0]}x${to}`;
+            }
+          } else {
+            notation = `${pieceLetter}x${to}`;
+          }
         }
       }
     }
@@ -1003,7 +1053,7 @@ export function sanitizeGameState(state: GameState): SanitizedGameState {
         piece: piece
           ? {
               id: piece.id,
-              type: piece.type,
+              type: piece.isUnknown ? 'unknown' : piece.type,
               color: piece.color,
             }
           : null,
@@ -1037,8 +1087,8 @@ export function sanitizeGameState(state: GameState): SanitizedGameState {
     winner: state.winner,
     winReason: state.winReason,
     revealedCount,
-    whiteKingPos: whiteKing?.position,
-    blackKingPos: blackKing?.position,
+    whiteKingPos: whiteKing && !whiteKing.isUnknown ? whiteKing.position : undefined,
+    blackKingPos: blackKing && !blackKing.isUnknown ? blackKing.position : undefined,
     inCheck,
   };
 

@@ -383,7 +383,7 @@ export default function App() {
             isLoading={isLoading}
           />
 
-          <div className="h-[280px] sm:h-[320px]">
+          <div className="min-h-[380px] lg:min-h-[420px] flex-1 flex flex-col">
             <MoveHistory
               moveHistory={gameState?.moveHistory || []}
               captured={gameState?.captured || []}
