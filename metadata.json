@@ -1,0 +1,6 @@
+{
+  "name": "Fog of War Chess",
+  "description": "A turn-based two-player chess game with imperfect information, symmetric cumulative fog of war, and server-authoritative state.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
